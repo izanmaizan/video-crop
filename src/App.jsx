@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import VideoList from './components/VideoList'
 import VideoPlayer from './components/VideoPlayer'
 import ImageViewer from './components/ImageViewer'
@@ -13,11 +13,15 @@ export default function App() {
   const [activeId, setActiveId] = useState(null)
   const [listOpen, setListOpen] = useState(false)
   const [yoloMode, setYoloMode] = useState(false)
+  const [cropPos, setCropPos] = useState({ x: 0.5, y: 0.5 })
   const videoRef = useRef(null)
   const imageRef = useRef(null)
 
   const activeVideo = videos.find(v => v.id === activeId) ?? null
   const activeType = activeVideo?.type ?? null
+
+  // Reset crop ke tengah tiap ganti file
+  useEffect(() => { setCropPos({ x: 0.5, y: 0.5 }) }, [activeId])
 
   const updateVideo = useCallback((id, patch) => {
     setVideos(prev => prev.map(v => v.id === id ? { ...v, ...patch } : v))
@@ -59,12 +63,12 @@ export default function App() {
       canvas.width = SIZE
       canvas.height = SIZE
       const ctx = canvas.getContext('2d')
-      ctx.fillStyle = '#000'
-      ctx.fillRect(0, 0, SIZE, SIZE)
-      const scale = Math.min(SIZE / srcW, SIZE / srcH)
-      const w = srcW * scale
-      const h = srcH * scale
-      ctx.drawImage(el, (SIZE - w) / 2, (SIZE - h) / 2, w, h)
+
+      // Ambil persegi dari posisi crop box
+      const boxVid = Math.min(srcW, srcH)
+      const cx = Math.max(boxVid / 2, Math.min(srcW - boxVid / 2, cropPos.x * srcW))
+      const cy = Math.max(boxVid / 2, Math.min(srcH - boxVid / 2, cropPos.y * srcH))
+      ctx.drawImage(el, cx - boxVid / 2, cy - boxVid / 2, boxVid, boxVid, 0, 0, SIZE, SIZE)
     } else {
       canvas = document.createElement('canvas')
       canvas.width = srcW
@@ -81,7 +85,7 @@ export default function App() {
     setVideos(prev => prev.map(vid =>
       vid.id === activeId ? { ...vid, frames: [...vid.frames, frame] } : vid
     ))
-  }, [activeId, activeType])
+  }, [activeId, activeType, cropPos])
 
   const deleteFrame = useCallback((frameId) => {
     setVideos(prev => prev.map(vid =>
@@ -181,6 +185,8 @@ export default function App() {
                         status={activeVideo.status}
                         videoRef={videoRef}
                         yoloMode={yoloMode}
+                        cropPos={cropPos}
+                        onCropMove={setCropPos}
                         onYoloToggle={() => setYoloMode(m => !m)}
                         onCapture={captureFrame}
                         onThumb={thumb => updateVideo(activeId, { thumb })}
@@ -196,6 +202,8 @@ export default function App() {
                         status={activeVideo.status}
                         imgRef={imageRef}
                         yoloMode={yoloMode}
+                        cropPos={cropPos}
+                        onCropMove={setCropPos}
                         onYoloToggle={() => setYoloMode(m => !m)}
                         onCapture={captureFrame}
                         onMarkDone={() => updateVideo(activeId, { status: 'done' })}

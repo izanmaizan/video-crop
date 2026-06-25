@@ -44,7 +44,7 @@ export default function FrameGallery({ frames, videoName, onDelete, onDownload, 
               </div>
             </div>
             <div className="fc-foot">
-              <span>#{i + 1}</span>
+              <span>#{i + 1}{f.yolo && <span className="fc-yolo">640²</span>}</span>
               <span>{fmtTime(f.timestamp)}</span>
             </div>
           </div>

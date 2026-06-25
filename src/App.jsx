@@ -11,6 +11,7 @@ export default function App() {
   const [videos, setVideos] = useState([])
   const [activeId, setActiveId] = useState(null)
   const [listOpen, setListOpen] = useState(false)
+  const [yoloMode, setYoloMode] = useState(false)
   const videoRef = useRef(null)
 
   const activeVideo = videos.find(v => v.id === activeId) ?? null
@@ -39,14 +40,36 @@ export default function App() {
     setListOpen(false)
   }, [activeId])
 
-  const captureFrame = useCallback(() => {
+  const captureFrame = useCallback((isYolo) => {
     const v = videoRef.current
     if (!v || !activeId) return
-    const canvas = document.createElement('canvas')
-    canvas.width = v.videoWidth
-    canvas.height = v.videoHeight
-    canvas.getContext('2d').drawImage(v, 0, 0)
-    const frame = { id: Date.now(), src: canvas.toDataURL('image/png'), timestamp: v.currentTime }
+
+    let canvas
+    if (isYolo) {
+      const SIZE = 640
+      canvas = document.createElement('canvas')
+      canvas.width = SIZE
+      canvas.height = SIZE
+      const ctx = canvas.getContext('2d')
+      ctx.fillStyle = '#000'
+      ctx.fillRect(0, 0, SIZE, SIZE)
+      const scale = Math.min(SIZE / v.videoWidth, SIZE / v.videoHeight)
+      const w = v.videoWidth * scale
+      const h = v.videoHeight * scale
+      ctx.drawImage(v, (SIZE - w) / 2, (SIZE - h) / 2, w, h)
+    } else {
+      canvas = document.createElement('canvas')
+      canvas.width = v.videoWidth
+      canvas.height = v.videoHeight
+      canvas.getContext('2d').drawImage(v, 0, 0)
+    }
+
+    const frame = {
+      id: Date.now(),
+      src: canvas.toDataURL('image/png'),
+      timestamp: v.currentTime,
+      yolo: isYolo,
+    }
     setVideos(prev => prev.map(vid =>
       vid.id === activeId ? { ...vid, frames: [...vid.frames, frame] } : vid
     ))
@@ -71,7 +94,8 @@ export default function App() {
   const downloadFrame = useCallback((frame) => {
     const a = document.createElement('a')
     a.href = frame.src
-    a.download = `${activeVideo?.name ?? 'frame'}_${secToName(frame.timestamp)}.png`
+    const suffix = frame.yolo ? '_640x640' : ''
+    a.download = `${activeVideo?.name ?? 'frame'}_${secToName(frame.timestamp)}${suffix}.png`
     a.click()
   }, [activeVideo])
 
@@ -80,7 +104,8 @@ export default function App() {
     activeVideo.frames.forEach((f, i) => setTimeout(() => {
       const a = document.createElement('a')
       a.href = f.src
-      a.download = `${activeVideo.name}_${String(i + 1).padStart(3, '0')}_${secToName(f.timestamp)}.png`
+      const suffix = f.yolo ? '_640x640' : ''
+      a.download = `${activeVideo.name}_${String(i + 1).padStart(3, '0')}_${secToName(f.timestamp)}${suffix}.png`
       a.click()
     }, i * 200))
   }, [activeVideo])
@@ -143,6 +168,8 @@ export default function App() {
                     name={activeVideo.name}
                     status={activeVideo.status}
                     videoRef={videoRef}
+                    yoloMode={yoloMode}
+                    onYoloToggle={() => setYoloMode(m => !m)}
                     onCapture={captureFrame}
                     onThumb={thumb => updateVideo(activeId, { thumb })}
                     onMarkDone={() => updateVideo(activeId, { status: 'done' })}

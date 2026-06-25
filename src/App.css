@@ -533,6 +533,26 @@
 .spd-on { background: var(--accent); color: #fff; }
 .spd-on:hover { background: var(--accent-h); color: #fff; }
 
+.btn-yolo {
+  padding: 0 10px;
+  height: 36px;
+  border-radius: var(--r-sm);
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  transition: all 0.12s;
+  white-space: nowrap;
+}
+.btn-yolo:hover { border-color: var(--green); color: var(--green); }
+.yolo-on {
+  background: var(--green-dim);
+  border-color: var(--green);
+  color: var(--green);
+}
+
 .c-crop {
   display: flex;
   align-items: center;
@@ -549,6 +569,18 @@
 }
 .c-crop:hover { background: var(--accent-h); }
 .c-crop:active { transform: scale(0.96); }
+
+.fc-yolo {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 0 4px;
+  background: var(--green-dim);
+  color: var(--green);
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 700;
+  vertical-align: middle;
+}
 
 .hint {
   padding: 7px 16px 9px;

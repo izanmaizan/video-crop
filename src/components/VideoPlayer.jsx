@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 
-export default function VideoPlayer({ src, name, status, videoRef, onCapture, onThumb, onMarkDone, onMarkPending }) {
+export default function VideoPlayer({ src, name, status, videoRef, yoloMode, onYoloToggle, onCapture, onThumb, onMarkDone, onMarkPending }) {
   const [playing, setPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
@@ -82,8 +82,8 @@ export default function VideoPlayer({ src, name, status, videoRef, onCapture, on
   const handleCapture = useCallback(() => {
     setFlash(true)
     setTimeout(() => setFlash(false), 300)
-    onCapture()
-  }, [onCapture])
+    onCapture(yoloMode)
+  }, [onCapture, yoloMode])
 
   useEffect(() => {
     const handler = (e) => {
@@ -169,9 +169,16 @@ export default function VideoPlayer({ src, name, status, videoRef, onCapture, on
                 </button>
               ))}
             </div>
+            <button
+              className={`btn-yolo ${yoloMode ? 'yolo-on' : ''}`}
+              onClick={onYoloToggle}
+              title="Mode 640×640 untuk dataset YOLO"
+            >
+              640×640
+            </button>
             <button className="c-crop" onClick={handleCapture}>
               <CropIcon />
-              <span>Crop</span>
+              <span>Crop{yoloMode ? ' YOLO' : ''}</span>
             </button>
           </div>
         </div>

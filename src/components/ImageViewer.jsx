@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
+import CropOverlay from './CropOverlay'
 
-export default function ImageViewer({ src, name, status, imgRef, yoloMode, onYoloToggle, onCapture, onMarkDone, onMarkPending }) {
+export default function ImageViewer({ src, name, status, imgRef, yoloMode, cropPos, onCropMove, onYoloToggle, onCapture, onMarkDone, onMarkPending }) {
   const [flash, setFlash] = useState(false)
   const [dims, setDims] = useState(null)
 
@@ -35,6 +36,14 @@ export default function ImageViewer({ src, name, status, imgRef, yoloMode, onYol
           className="img-el"
           onLoad={e => setDims({ w: e.target.naturalWidth, h: e.target.naturalHeight })}
         />
+        {yoloMode && dims && (
+          <CropOverlay
+            mediaW={dims.w}
+            mediaH={dims.h}
+            cropPos={cropPos}
+            onMove={onCropMove}
+          />
+        )}
       </div>
 
       <div className="img-ctrl">

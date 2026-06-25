@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
+import CropOverlay from './CropOverlay'
 
-export default function VideoPlayer({ src, name, status, videoRef, yoloMode, onYoloToggle, onCapture, onThumb, onMarkDone, onMarkPending }) {
+export default function VideoPlayer({ src, name, status, videoRef, yoloMode, cropPos, onCropMove, onYoloToggle, onCapture, onThumb, onMarkDone, onMarkPending }) {
   const [playing, setPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
@@ -8,13 +9,14 @@ export default function VideoPlayer({ src, name, status, videoRef, yoloMode, onY
   const [muted, setMuted] = useState(false)
   const [speed, setSpeed] = useState(1)
   const [flash, setFlash] = useState(false)
+  const [dims, setDims] = useState(null)
   const progressRef = useRef(null)
 
   useEffect(() => {
     const v = videoRef.current
     if (!v) return
     const onTime = () => setCurrentTime(v.currentTime)
-    const onMeta = () => setDuration(v.duration)
+    const onMeta = () => { setDuration(v.duration); setDims({ w: v.videoWidth, h: v.videoHeight }) }
     const onEnded = () => setPlaying(false)
     const onData = () => {
       if (!v.videoWidth) return
@@ -113,15 +115,23 @@ export default function VideoPlayer({ src, name, status, videoRef, yoloMode, onY
         </button>
       </div>
 
-      <div className="video-box" onClick={togglePlay}>
+      <div className="video-box" onClick={!yoloMode ? togglePlay : undefined}>
         {flash && <div className="flash" />}
         <video ref={videoRef} src={src} className="video-el" playsInline />
-        {!playing && (
+        {!playing && !yoloMode && (
           <div className="play-overlay">
             <svg viewBox="0 0 24 24" fill="currentColor" width="54" height="54">
               <polygon points="5 3 19 12 5 21 5 3" />
             </svg>
           </div>
+        )}
+        {yoloMode && dims && (
+          <CropOverlay
+            mediaW={dims.w}
+            mediaH={dims.h}
+            cropPos={cropPos}
+            onMove={onCropMove}
+          />
         )}
       </div>
 

@@ -1,7 +1,8 @@
 import { useRef, useEffect } from 'react'
 
 export default function VideoList({ videos, activeId, onSelect, onAddMore, onRemove, onToggleDone, onSetThumb }) {
-  const inputRef = useRef(null)
+  const fileRef = useRef(null)
+  const folderRef = useRef(null)
   const done = videos.filter(v => v.status === 'done').length
 
   return (
@@ -28,16 +29,27 @@ export default function VideoList({ videos, activeId, onSelect, onAddMore, onRem
 
       <div className="vlist-foot">
         <input
-          ref={inputRef}
+          ref={fileRef}
           type="file"
           accept="video/*"
           multiple
           hidden
-          onChange={e => { onAddMore(e.target.files); inputRef.current.value = '' }}
+          onChange={e => { onAddMore(e.target.files); fileRef.current.value = '' }}
         />
-        <button className="btn-add" onClick={() => inputRef.current.click()}>
+        <input
+          ref={folderRef}
+          type="file"
+          webkitdirectory=""
+          hidden
+          onChange={e => { onAddMore(e.target.files); folderRef.current.value = '' }}
+        />
+        <button className="btn-add" onClick={() => fileRef.current.click()}>
           <PlusIcon />
           Tambah Video
+        </button>
+        <button className="btn-add btn-add-folder" onClick={() => folderRef.current.click()}>
+          <FolderIcon />
+          Buka Folder
         </button>
       </div>
     </div>
@@ -130,6 +142,13 @@ function PlusIcon() {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
       <line x1="12" y1="5" x2="12" y2="19" />
       <line x1="5" y1="12" x2="19" y2="12" />
+    </svg>
+  )
+}
+function FolderIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
+      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
     </svg>
   )
 }

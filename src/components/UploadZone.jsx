@@ -22,7 +22,7 @@ export default function UploadZone({ onAdd }) {
       <input
         ref={fileRef}
         type="file"
-        accept="video/*"
+        accept="video/*,image/*"
         multiple
         hidden
         onChange={e => { onAdd(e.target.files); fileRef.current.value = '' }}
@@ -39,8 +39,8 @@ export default function UploadZone({ onAdd }) {
         <polyline points="17 8 12 3 7 8" />
         <line x1="12" y1="3" x2="12" y2="15" />
       </svg>
-      <p className="upload-t">Pilih video atau buka folder</p>
-      <p className="upload-s">Semua video dalam folder otomatis terbaca &nbsp;·&nbsp; MP4, MOV, AVI, WebM</p>
+      <p className="upload-t">Pilih video / foto atau buka folder</p>
+      <p className="upload-s">Video &amp; gambar dalam folder otomatis terbaca &nbsp;·&nbsp; MP4, MOV, AVI, JPG, PNG, WebP</p>
       <div className="upload-btns">
         <button className="btn-pick" onClick={e => { e.stopPropagation(); fileRef.current.click() }}>
           Pilih Video

@@ -31,7 +31,7 @@ export default function VideoList({ videos, activeId, onSelect, onAddMore, onRem
         <input
           ref={fileRef}
           type="file"
-          accept="video/*"
+          accept="video/*,image/*"
           multiple
           hidden
           onChange={e => { onAddMore(e.target.files); fileRef.current.value = '' }}
@@ -60,6 +60,12 @@ function VideoItem({ video, index, active, onSelect, onRemove, onToggleDone, onS
   const generated = useRef(false)
 
   useEffect(() => {
+    // Gambar: langsung pakai url sebagai thumb
+    if (video.type === 'image') {
+      if (!video.thumb) onSetThumb(video.url)
+      return
+    }
+    // Video: generate thumbnail dari frame pertama
     if (video.thumb || generated.current) return
     generated.current = true
     const el = document.createElement('video')
@@ -96,6 +102,9 @@ function VideoItem({ video, index, active, onSelect, onRemove, onToggleDone, onS
             <CheckIcon size={10} />
           </div>
         )}
+        <span className={`vi-type-badge ${video.type === 'image' ? 'badge-img' : 'badge-vid'}`}>
+          {video.type === 'image' ? 'IMG' : 'VID'}
+        </span>
       </div>
 
       <div className="vi-info">

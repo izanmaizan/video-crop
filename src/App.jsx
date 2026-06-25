@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from 'react'
 import VideoList from './components/VideoList'
 import VideoPlayer from './components/VideoPlayer'
+import ImageViewer from './components/ImageViewer'
 import FrameGallery from './components/FrameGallery'
 import UploadZone from './components/UploadZone'
 import './App.css'
@@ -13,20 +14,23 @@ export default function App() {
   const [listOpen, setListOpen] = useState(false)
   const [yoloMode, setYoloMode] = useState(false)
   const videoRef = useRef(null)
+  const imageRef = useRef(null)
 
   const activeVideo = videos.find(v => v.id === activeId) ?? null
+  const activeType = activeVideo?.type ?? null
 
   const updateVideo = useCallback((id, patch) => {
     setVideos(prev => prev.map(v => v.id === id ? { ...v, ...patch } : v))
   }, [])
 
-  const addVideos = useCallback((files) => {
+  const addFiles = useCallback((files) => {
     const entries = Array.from(files)
-      .filter(f => f.type.startsWith('video/'))
+      .filter(f => f.type.startsWith('video/') || f.type.startsWith('image/'))
       .map(f => ({
         id: uid++,
         name: f.name.replace(/\.[^/.]+$/, ''),
         url: URL.createObjectURL(f),
+        type: f.type.startsWith('video/') ? 'video' : 'image',
         status: 'pending',
         frames: [],
         thumb: null,
@@ -41,8 +45,12 @@ export default function App() {
   }, [activeId])
 
   const captureFrame = useCallback((isYolo) => {
-    const v = videoRef.current
-    if (!v || !activeId) return
+    if (!activeId) return
+    const el = activeType === 'video' ? videoRef.current : imageRef.current
+    if (!el) return
+
+    const srcW = activeType === 'video' ? el.videoWidth : el.naturalWidth
+    const srcH = activeType === 'video' ? el.videoHeight : el.naturalHeight
 
     let canvas
     if (isYolo) {
@@ -53,27 +61,27 @@ export default function App() {
       const ctx = canvas.getContext('2d')
       ctx.fillStyle = '#000'
       ctx.fillRect(0, 0, SIZE, SIZE)
-      const scale = Math.min(SIZE / v.videoWidth, SIZE / v.videoHeight)
-      const w = v.videoWidth * scale
-      const h = v.videoHeight * scale
-      ctx.drawImage(v, (SIZE - w) / 2, (SIZE - h) / 2, w, h)
+      const scale = Math.min(SIZE / srcW, SIZE / srcH)
+      const w = srcW * scale
+      const h = srcH * scale
+      ctx.drawImage(el, (SIZE - w) / 2, (SIZE - h) / 2, w, h)
     } else {
       canvas = document.createElement('canvas')
-      canvas.width = v.videoWidth
-      canvas.height = v.videoHeight
-      canvas.getContext('2d').drawImage(v, 0, 0)
+      canvas.width = srcW
+      canvas.height = srcH
+      canvas.getContext('2d').drawImage(el, 0, 0)
     }
 
     const frame = {
       id: Date.now(),
       src: canvas.toDataURL('image/png'),
-      timestamp: v.currentTime,
+      timestamp: activeType === 'video' ? (videoRef.current?.currentTime ?? 0) : null,
       yolo: isYolo,
     }
     setVideos(prev => prev.map(vid =>
       vid.id === activeId ? { ...vid, frames: [...vid.frames, frame] } : vid
     ))
-  }, [activeId])
+  }, [activeId, activeType])
 
   const deleteFrame = useCallback((frameId) => {
     setVideos(prev => prev.map(vid =>
@@ -94,8 +102,9 @@ export default function App() {
   const downloadFrame = useCallback((frame) => {
     const a = document.createElement('a')
     a.href = frame.src
+    const ts = frame.timestamp !== null ? `_${secToName(frame.timestamp)}` : ''
     const suffix = frame.yolo ? '_640x640' : ''
-    a.download = `${activeVideo?.name ?? 'frame'}_${secToName(frame.timestamp)}${suffix}.png`
+    a.download = `${activeVideo?.name ?? 'frame'}${ts}${suffix}.png`
     a.click()
   }, [activeVideo])
 
@@ -104,8 +113,9 @@ export default function App() {
     activeVideo.frames.forEach((f, i) => setTimeout(() => {
       const a = document.createElement('a')
       a.href = f.src
+      const ts = f.timestamp !== null ? `_${secToName(f.timestamp)}` : ''
       const suffix = f.yolo ? '_640x640' : ''
-      a.download = `${activeVideo.name}_${String(i + 1).padStart(3, '0')}_${secToName(f.timestamp)}${suffix}.png`
+      a.download = `${activeVideo.name}_${String(i + 1).padStart(3, '0')}${ts}${suffix}.png`
       a.click()
     }, i * 200))
   }, [activeVideo])
@@ -128,7 +138,7 @@ export default function App() {
             <button className="btn-toggle" onClick={() => setListOpen(o => !o)}>
               {listOpen
                 ? <XIcon />
-                : <><ListIcon /><span>{videos.length} Video</span></>
+                : <><ListIcon /><span>{videos.length} File</span></>
               }
             </button>
           </div>
@@ -144,7 +154,7 @@ export default function App() {
                 videos={videos}
                 activeId={activeId}
                 onSelect={id => { setActiveId(id); setListOpen(false) }}
-                onAddMore={addVideos}
+                onAddMore={addFiles}
                 onRemove={removeVideo}
                 onToggleDone={id => updateVideo(id, {
                   status: videos.find(v => v.id === id)?.status === 'done' ? 'pending' : 'done'
@@ -157,24 +167,42 @@ export default function App() {
 
         <main className="main">
           {videos.length === 0
-            ? <UploadZone onAdd={addVideos} />
+            ? <UploadZone onAdd={addFiles} />
             : !activeVideo
-              ? <p className="empty-hint">Pilih video dari daftar</p>
+              ? <p className="empty-hint">Pilih file dari daftar</p>
               : (
                 <div className="workspace">
-                  <VideoPlayer
-                    key={activeVideo.id}
-                    src={activeVideo.url}
-                    name={activeVideo.name}
-                    status={activeVideo.status}
-                    videoRef={videoRef}
-                    yoloMode={yoloMode}
-                    onYoloToggle={() => setYoloMode(m => !m)}
-                    onCapture={captureFrame}
-                    onThumb={thumb => updateVideo(activeId, { thumb })}
-                    onMarkDone={() => updateVideo(activeId, { status: 'done' })}
-                    onMarkPending={() => updateVideo(activeId, { status: 'pending' })}
-                  />
+                  {activeVideo.type === 'video'
+                    ? (
+                      <VideoPlayer
+                        key={activeVideo.id}
+                        src={activeVideo.url}
+                        name={activeVideo.name}
+                        status={activeVideo.status}
+                        videoRef={videoRef}
+                        yoloMode={yoloMode}
+                        onYoloToggle={() => setYoloMode(m => !m)}
+                        onCapture={captureFrame}
+                        onThumb={thumb => updateVideo(activeId, { thumb })}
+                        onMarkDone={() => updateVideo(activeId, { status: 'done' })}
+                        onMarkPending={() => updateVideo(activeId, { status: 'pending' })}
+                      />
+                    )
+                    : (
+                      <ImageViewer
+                        key={activeVideo.id}
+                        src={activeVideo.url}
+                        name={activeVideo.name}
+                        status={activeVideo.status}
+                        imgRef={imageRef}
+                        yoloMode={yoloMode}
+                        onYoloToggle={() => setYoloMode(m => !m)}
+                        onCapture={captureFrame}
+                        onMarkDone={() => updateVideo(activeId, { status: 'done' })}
+                        onMarkPending={() => updateVideo(activeId, { status: 'pending' })}
+                      />
+                    )
+                  }
                   <FrameGallery
                     frames={activeVideo.frames}
                     videoName={activeVideo.name}

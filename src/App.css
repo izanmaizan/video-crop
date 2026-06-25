@@ -582,6 +582,82 @@
   vertical-align: middle;
 }
 
+/* ── Image Viewer ── */
+.player-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.badge-img {
+  flex-shrink: 0;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: rgba(250,180,60,0.15);
+  color: #f0a830;
+  letter-spacing: 0.5px;
+}
+
+.img-box {
+  position: relative;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 160px;
+}
+.img-el {
+  width: 100%;
+  max-height: 460px;
+  object-fit: contain;
+  display: block;
+}
+
+.img-ctrl {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.img-dims {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.img-dims-arrow { color: var(--green); }
+.img-ctrl-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Badge tipe di thumbnail sidebar */
+.vi-type-badge {
+  position: absolute;
+  bottom: 2px;
+  left: 2px;
+  font-size: 8px;
+  font-weight: 800;
+  padding: 1px 4px;
+  border-radius: 3px;
+  letter-spacing: 0.3px;
+  line-height: 1.4;
+}
+.badge-vid {
+  background: rgba(124,106,255,0.8);
+  color: #fff;
+}
+.badge-img {
+  background: rgba(240,168,48,0.85);
+  color: #fff;
+}
+
 .hint {
   padding: 7px 16px 9px;
   font-size: 11px;

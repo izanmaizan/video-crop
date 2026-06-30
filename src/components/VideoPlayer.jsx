@@ -95,6 +95,7 @@ export default function VideoPlayer({
       if (tag === 'INPUT' || tag === 'TEXTAREA') return
 
       if (e.code === 'Space') { e.preventDefault(); togglePlay(); return }
+      if (e.code === 'Enter') { e.preventDefault(); onNext(); return }
       if (e.code === 'KeyC') { handleCapture(); return }
 
       if (yoloMode) {
@@ -115,7 +116,7 @@ export default function VideoPlayer({
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [togglePlay, skip, handleCapture, yoloMode, onCropMove])
+  }, [togglePlay, skip, handleCapture, yoloMode, onCropMove, onNext])
 
   const pct = duration ? (currentTime / duration) * 100 : 0
 
@@ -211,8 +212,8 @@ export default function VideoPlayer({
 
       <p className="hint">
         {yoloMode
-          ? <><kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd> geser kotak &nbsp; <kbd>Shift</kbd>+<kbd>←</kbd><kbd>→</kbd> skip 5s &nbsp; <kbd>C</kbd> crop</>
-          : <><kbd>Space</kbd> play/pause &nbsp; <kbd>←</kbd><kbd>→</kbd> skip 5s &nbsp; <kbd>C</kbd> crop</>
+          ? <><kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd> geser kotak &nbsp; <kbd>Shift</kbd>+<kbd>←</kbd><kbd>→</kbd> skip 5s &nbsp; <kbd>C</kbd> crop &nbsp; <kbd>Enter</kbd> selesai & lanjut</>
+          : <><kbd>Space</kbd> play/pause &nbsp; <kbd>←</kbd><kbd>→</kbd> skip 5s &nbsp; <kbd>C</kbd> crop &nbsp; <kbd>Enter</kbd> selesai & lanjut</>
         }
       </p>
     </div>

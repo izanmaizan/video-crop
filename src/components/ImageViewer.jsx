@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import CropOverlay from './CropOverlay'
 
 export default function ImageViewer({
@@ -15,6 +15,24 @@ export default function ImageViewer({
     setTimeout(() => setFlash(false), 300)
     onCapture(yoloMode)
   }, [onCapture, yoloMode])
+
+  const STEP = 0.04
+  useEffect(() => {
+    const handler = (e) => {
+      const tag = e.target.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return
+      if (e.code === 'Enter') { e.preventDefault(); onNext(); return }
+      if (e.code === 'KeyC') { handleCapture(); return }
+      if (yoloMode && !e.shiftKey) {
+        if (e.code === 'ArrowLeft')  { e.preventDefault(); onCropMove(p => ({ ...p, x: Math.max(0, p.x - STEP) })); return }
+        if (e.code === 'ArrowRight') { e.preventDefault(); onCropMove(p => ({ ...p, x: Math.min(1, p.x + STEP) })); return }
+        if (e.code === 'ArrowUp')    { e.preventDefault(); onCropMove(p => ({ ...p, y: Math.max(0, p.y - STEP) })); return }
+        if (e.code === 'ArrowDown')  { e.preventDefault(); onCropMove(p => ({ ...p, y: Math.min(1, p.y + STEP) })); return }
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [handleCapture, yoloMode, onCropMove, onNext])
 
   return (
     <div className="player">

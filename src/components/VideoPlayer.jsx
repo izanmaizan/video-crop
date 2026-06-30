@@ -1,7 +1,12 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import CropOverlay from './CropOverlay'
 
-export default function VideoPlayer({ src, name, status, videoRef, yoloMode, cropPos, onCropMove, onYoloToggle, onCapture, onThumb, onMarkDone, onMarkPending }) {
+export default function VideoPlayer({
+  src, name, status, videoRef,
+  yoloMode, cropPos, onCropMove, onYoloToggle,
+  onCapture, onThumb, onMarkDone, onMarkPending,
+  onNext, hasNext,
+}) {
   const [playing, setPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
@@ -21,8 +26,7 @@ export default function VideoPlayer({ src, name, status, videoRef, yoloMode, cro
     const onData = () => {
       if (!v.videoWidth) return
       const c = document.createElement('canvas')
-      c.width = v.videoWidth
-      c.height = v.videoHeight
+      c.width = v.videoWidth; c.height = v.videoHeight
       c.getContext('2d').drawImage(v, 0, 0)
       onThumb(c.toDataURL('image/jpeg', 0.7))
     }
@@ -59,20 +63,15 @@ export default function VideoPlayer({ src, name, status, videoRef, yoloMode, cro
 
   const handleVolume = (e) => {
     const val = parseFloat(e.target.value)
-    setVolume(val)
-    setMuted(val === 0)
-    if (videoRef.current) {
-      videoRef.current.volume = val
-      videoRef.current.muted = val === 0
-    }
+    setVolume(val); setMuted(val === 0)
+    if (videoRef.current) { videoRef.current.volume = val; videoRef.current.muted = val === 0 }
   }
 
   const toggleMute = () => {
     const v = videoRef.current
     if (!v) return
     const next = !muted
-    v.muted = next
-    setMuted(next)
+    v.muted = next; setMuted(next)
     if (!next && volume === 0) { v.volume = 0.5; setVolume(0.5) }
   }
 
@@ -87,18 +86,36 @@ export default function VideoPlayer({ src, name, status, videoRef, yoloMode, cro
     onCapture(yoloMode)
   }, [onCapture, yoloMode])
 
+  // Keyboard: YOLO mode → Arrow geser kotak, Shift+Arrow skip video
+  // Normal mode → Arrow skip video
   useEffect(() => {
+    const STEP = 0.04
     const handler = (e) => {
       const tag = e.target.tagName
       if (tag === 'INPUT' || tag === 'TEXTAREA') return
-      if (e.code === 'Space') { e.preventDefault(); togglePlay() }
-      if (e.code === 'ArrowLeft') { e.preventDefault(); skip(-5) }
-      if (e.code === 'ArrowRight') { e.preventDefault(); skip(5) }
-      if (e.code === 'KeyC') handleCapture()
+
+      if (e.code === 'Space') { e.preventDefault(); togglePlay(); return }
+      if (e.code === 'KeyC') { handleCapture(); return }
+
+      if (yoloMode) {
+        if (!e.shiftKey) {
+          if (e.code === 'ArrowLeft')  { e.preventDefault(); onCropMove(p => ({ ...p, x: Math.max(0, p.x - STEP) })); return }
+          if (e.code === 'ArrowRight') { e.preventDefault(); onCropMove(p => ({ ...p, x: Math.min(1, p.x + STEP) })); return }
+          if (e.code === 'ArrowUp')    { e.preventDefault(); onCropMove(p => ({ ...p, y: Math.max(0, p.y - STEP) })); return }
+          if (e.code === 'ArrowDown')  { e.preventDefault(); onCropMove(p => ({ ...p, y: Math.min(1, p.y + STEP) })); return }
+        }
+        if (e.shiftKey) {
+          if (e.code === 'ArrowLeft')  { e.preventDefault(); skip(-5); return }
+          if (e.code === 'ArrowRight') { e.preventDefault(); skip(5);  return }
+        }
+      } else {
+        if (e.code === 'ArrowLeft')  { e.preventDefault(); skip(-5) }
+        if (e.code === 'ArrowRight') { e.preventDefault(); skip(5)  }
+      }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [togglePlay, skip, handleCapture])
+  }, [togglePlay, skip, handleCapture, yoloMode, onCropMove])
 
   const pct = duration ? (currentTime / duration) * 100 : 0
 
@@ -106,13 +123,24 @@ export default function VideoPlayer({ src, name, status, videoRef, yoloMode, cro
     <div className="player">
       <div className="player-topbar">
         <h2 className="player-name" title={name}>{name}</h2>
-        <button
-          className={`btn-done ${status === 'done' ? 'is-done' : ''}`}
-          onClick={status === 'done' ? onMarkPending : onMarkDone}
-        >
-          <CheckIcon />
-          {status === 'done' ? 'Selesai' : 'Tandai Selesai'}
-        </button>
+        <div className="topbar-actions">
+          <button
+            className={`btn-done ${status === 'done' ? 'is-done' : ''}`}
+            onClick={status === 'done' ? onMarkPending : onMarkDone}
+            title={status === 'done' ? 'Batalkan selesai' : 'Tandai selesai'}
+          >
+            <CheckIcon />
+            {status === 'done' ? 'Selesai' : 'Tandai Selesai'}
+          </button>
+          <button
+            className="btn-next"
+            onClick={onNext}
+            title="Tandai selesai dan lanjut ke berikutnya"
+          >
+            Selesai & Lanjut
+            <NextIcon />
+          </button>
+        </div>
       </div>
 
       <div className="video-box" onClick={!yoloMode ? togglePlay : undefined}>
@@ -126,12 +154,7 @@ export default function VideoPlayer({ src, name, status, videoRef, yoloMode, cro
           </div>
         )}
         {yoloMode && dims && (
-          <CropOverlay
-            mediaW={dims.w}
-            mediaH={dims.h}
-            cropPos={cropPos}
-            onMove={onCropMove}
-          />
+          <CropOverlay mediaW={dims.w} mediaH={dims.h} cropPos={cropPos} onMove={onCropMove} />
         )}
       </div>
 
@@ -161,12 +184,8 @@ export default function VideoPlayer({ src, name, status, videoRef, yoloMode, cro
               <button className="c-btn" onClick={toggleMute}>
                 {muted || volume === 0 ? <MuteIcon /> : <VolIcon />}
               </button>
-              <input
-                type="range" min="0" max="1" step="0.05"
-                value={muted ? 0 : volume}
-                onChange={handleVolume}
-                className="vol-range"
-              />
+              <input type="range" min="0" max="1" step="0.05"
+                value={muted ? 0 : volume} onChange={handleVolume} className="vol-range" />
             </div>
             <span className="time">{fmt(currentTime)} / {fmt(duration)}</span>
           </div>
@@ -179,11 +198,7 @@ export default function VideoPlayer({ src, name, status, videoRef, yoloMode, cro
                 </button>
               ))}
             </div>
-            <button
-              className={`btn-yolo ${yoloMode ? 'yolo-on' : ''}`}
-              onClick={onYoloToggle}
-              title="Mode 640×640 untuk dataset YOLO"
-            >
+            <button className={`btn-yolo ${yoloMode ? 'yolo-on' : ''}`} onClick={onYoloToggle} title="Mode 640×640 YOLO">
               640×640
             </button>
             <button className="c-crop" onClick={handleCapture}>
@@ -195,9 +210,10 @@ export default function VideoPlayer({ src, name, status, videoRef, yoloMode, cro
       </div>
 
       <p className="hint">
-        <kbd>Space</kbd> play/pause &nbsp;
-        <kbd>←</kbd><kbd>→</kbd> lewati 5s &nbsp;
-        <kbd>C</kbd> crop
+        {yoloMode
+          ? <><kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd> geser kotak &nbsp; <kbd>Shift</kbd>+<kbd>←</kbd><kbd>→</kbd> skip 5s &nbsp; <kbd>C</kbd> crop</>
+          : <><kbd>Space</kbd> play/pause &nbsp; <kbd>←</kbd><kbd>→</kbd> skip 5s &nbsp; <kbd>C</kbd> crop</>
+        }
       </p>
     </div>
   )
@@ -208,27 +224,12 @@ function fmt(s) {
   return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(Math.floor(s % 60)).padStart(2, '0')}`
 }
 
-function PlayIcon() {
-  return <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><polygon points="5 3 19 12 5 21 5 3" /></svg>
-}
-function PauseIcon() {
-  return <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" /></svg>
-}
-function SkipBackIcon() {
-  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M11 17l-5-5 5-5" /><path d="M18 17l-5-5 5-5" /></svg>
-}
-function SkipFwdIcon() {
-  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M13 17l5-5-5-5" /><path d="M6 17l5-5-5-5" /></svg>
-}
-function VolIcon() {
-  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="17" height="17"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><path d="M19.07 4.93a10 10 0 0 1 0 14.14" /><path d="M15.54 8.46a5 5 0 0 1 0 7.07" /></svg>
-}
-function MuteIcon() {
-  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="17" height="17"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><line x1="23" y1="9" x2="17" y2="15" /><line x1="17" y1="9" x2="23" y2="15" /></svg>
-}
-function CropIcon() {
-  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="15" height="15"><path d="M6.13 1L6 16a2 2 0 0 0 2 2h15" /><path d="M1 6.13L16 6a2 2 0 0 1 2 2v15" /></svg>
-}
-function CheckIcon() {
-  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="13" height="13"><polyline points="20 6 9 17 4 12" /></svg>
-}
+function PlayIcon() { return <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><polygon points="5 3 19 12 5 21 5 3" /></svg> }
+function PauseIcon() { return <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" /></svg> }
+function SkipBackIcon() { return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M11 17l-5-5 5-5" /><path d="M18 17l-5-5 5-5" /></svg> }
+function SkipFwdIcon() { return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18"><path d="M13 17l5-5-5-5" /><path d="M6 17l5-5-5-5" /></svg> }
+function VolIcon() { return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="17" height="17"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><path d="M19.07 4.93a10 10 0 0 1 0 14.14" /><path d="M15.54 8.46a5 5 0 0 1 0 7.07" /></svg> }
+function MuteIcon() { return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="17" height="17"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><line x1="23" y1="9" x2="17" y2="15" /><line x1="17" y1="9" x2="23" y2="15" /></svg> }
+function CropIcon() { return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="15" height="15"><path d="M6.13 1L6 16a2 2 0 0 0 2 2h15" /><path d="M1 6.13L16 6a2 2 0 0 1 2 2v15" /></svg> }
+function CheckIcon() { return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="13" height="13"><polyline points="20 6 9 17 4 12" /></svg> }
+function NextIcon() { return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="13" height="13"><polyline points="9 18 15 12 9 6" /></svg> }

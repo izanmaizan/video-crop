@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-export default function FrameGallery({ frames, videoName, onDelete, onDownload, onDownloadAll }) {
+export default function FrameGallery({ frames, onDelete, onDownload, onDownloadAll }) {
   const [preview, setPreview] = useState(null)
 
   if (frames.length === 0) {
@@ -44,8 +44,11 @@ export default function FrameGallery({ frames, videoName, onDelete, onDownload, 
               </div>
             </div>
             <div className="fc-foot">
-              <span>#{i + 1}{f.yolo && <span className="fc-yolo">640²</span>}</span>
-              <span>{fmtTime(f.timestamp)}</span>
+              <span className="fc-source" title={f.sourceName}>{f.sourceName ?? '—'}</span>
+              <span>
+                {f.yolo && <span className="fc-yolo">640²</span>}
+                {f.timestamp !== null ? fmtTime(f.timestamp) : 'foto'}
+              </span>
             </div>
           </div>
         ))}
@@ -62,7 +65,13 @@ export default function FrameGallery({ frames, videoName, onDelete, onDownload, 
             </button>
             <img src={preview.src} alt="Preview" className="modal-img" />
             <div className="modal-ft">
-              <span className="modal-ts">{fmtTimeFull(preview.timestamp)}</span>
+              <div className="modal-info">
+                <span className="modal-source">{preview.sourceName}</span>
+                <span className="modal-ts">
+                  {preview.timestamp !== null ? fmtTimeFull(preview.timestamp) : 'foto'}
+                  {preview.yolo && <span className="fc-yolo" style={{ marginLeft: 6 }}>640×640</span>}
+                </span>
+              </div>
               <button className="btn-dl-modal" onClick={() => onDownload(preview)}>
                 <DlIcon /> Download
               </button>

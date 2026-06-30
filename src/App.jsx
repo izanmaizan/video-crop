@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import VideoList from './components/VideoList'
 import VideoPlayer from './components/VideoPlayer'
 import ImageViewer from './components/ImageViewer'
@@ -20,8 +20,16 @@ export default function App() {
   const activeVideo = videos.find(v => v.id === activeId) ?? null
   const activeType = activeVideo?.type ?? null
 
-  // Reset crop ke tengah tiap ganti file
+  // Reset crop box ke tengah tiap ganti file
   useEffect(() => { setCropPos({ x: 0.5, y: 0.5 }) }, [activeId])
+
+  // Gallery global — semua frame dari semua video/foto digabung
+  const allFrames = useMemo(() =>
+    videos
+      .flatMap(v => v.frames.map(f => ({ ...f, sourceName: v.name, sourceId: v.id })))
+      .sort((a, b) => a.id - b.id),
+    [videos]
+  )
 
   const updateVideo = useCallback((id, patch) => {
     setVideos(prev => prev.map(v => v.id === id ? { ...v, ...patch } : v))
@@ -63,8 +71,6 @@ export default function App() {
       canvas.width = SIZE
       canvas.height = SIZE
       const ctx = canvas.getContext('2d')
-
-      // Ambil persegi dari posisi crop box
       const boxVid = Math.min(srcW, srcH)
       const cx = Math.max(boxVid / 2, Math.min(srcW - boxVid / 2, cropPos.x * srcW))
       const cy = Math.max(boxVid / 2, Math.min(srcH - boxVid / 2, cropPos.y * srcH))
@@ -81,19 +87,21 @@ export default function App() {
       src: canvas.toDataURL('image/png'),
       timestamp: activeType === 'video' ? (videoRef.current?.currentTime ?? 0) : null,
       yolo: isYolo,
+      sourceId: activeId,
+      sourceName: activeVideo?.name ?? '',
     }
     setVideos(prev => prev.map(vid =>
       vid.id === activeId ? { ...vid, frames: [...vid.frames, frame] } : vid
     ))
-  }, [activeId, activeType, cropPos])
+  }, [activeId, activeType, cropPos, activeVideo])
 
+  // Delete dari video manapun (ID frame unik global)
   const deleteFrame = useCallback((frameId) => {
-    setVideos(prev => prev.map(vid =>
-      vid.id === activeId
-        ? { ...vid, frames: vid.frames.filter(f => f.id !== frameId) }
-        : vid
-    ))
-  }, [activeId])
+    setVideos(prev => prev.map(v => ({
+      ...v,
+      frames: v.frames.filter(f => f.id !== frameId),
+    })))
+  }, [])
 
   const removeVideo = useCallback((id) => {
     setVideos(prev => {
@@ -103,26 +111,36 @@ export default function App() {
     })
   }, [activeId])
 
+  // Tandai selesai lalu pindah ke file berikutnya
+  const goNext = useCallback(() => {
+    if (!activeId) return
+    updateVideo(activeId, { status: 'done' })
+    const idx = videos.findIndex(v => v.id === activeId)
+    const next = videos[idx + 1]
+    if (next) setActiveId(next.id)
+  }, [activeId, videos, updateVideo])
+
   const downloadFrame = useCallback((frame) => {
     const a = document.createElement('a')
     a.href = frame.src
+    const name = frame.sourceName ?? 'frame'
     const ts = frame.timestamp !== null ? `_${secToName(frame.timestamp)}` : ''
     const suffix = frame.yolo ? '_640x640' : ''
-    a.download = `${activeVideo?.name ?? 'frame'}${ts}${suffix}.png`
+    a.download = `${name}${ts}${suffix}.png`
     a.click()
-  }, [activeVideo])
+  }, [])
 
   const downloadAll = useCallback(() => {
-    if (!activeVideo) return
-    activeVideo.frames.forEach((f, i) => setTimeout(() => {
+    allFrames.forEach((f, i) => setTimeout(() => {
       const a = document.createElement('a')
       a.href = f.src
+      const name = f.sourceName ?? 'frame'
       const ts = f.timestamp !== null ? `_${secToName(f.timestamp)}` : ''
       const suffix = f.yolo ? '_640x640' : ''
-      a.download = `${activeVideo.name}_${String(i + 1).padStart(3, '0')}${ts}${suffix}.png`
+      a.download = `${name}_${String(i + 1).padStart(3, '0')}${ts}${suffix}.png`
       a.click()
     }, i * 200))
-  }, [activeVideo])
+  }, [allFrames])
 
   const doneCnt = videos.filter(v => v.status === 'done').length
 
@@ -192,6 +210,8 @@ export default function App() {
                         onThumb={thumb => updateVideo(activeId, { thumb })}
                         onMarkDone={() => updateVideo(activeId, { status: 'done' })}
                         onMarkPending={() => updateVideo(activeId, { status: 'pending' })}
+                        onNext={goNext}
+                        hasNext={videos.findIndex(v => v.id === activeId) < videos.length - 1}
                       />
                     )
                     : (
@@ -208,12 +228,13 @@ export default function App() {
                         onCapture={captureFrame}
                         onMarkDone={() => updateVideo(activeId, { status: 'done' })}
                         onMarkPending={() => updateVideo(activeId, { status: 'pending' })}
+                        onNext={goNext}
+                        hasNext={videos.findIndex(v => v.id === activeId) < videos.length - 1}
                       />
                     )
                   }
                   <FrameGallery
-                    frames={activeVideo.frames}
-                    videoName={activeVideo.name}
+                    frames={allFrames}
                     onDelete={deleteFrame}
                     onDownload={downloadFrame}
                     onDownloadAll={downloadAll}
